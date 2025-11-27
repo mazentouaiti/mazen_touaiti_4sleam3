@@ -1,34 +1,57 @@
 package tn.esprit.studentmanagement.controllers;
 
-import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.studentmanagement.entities.Student;
-import tn.esprit.studentmanagement.services.IStudentService;
+import tn.esprit.studentmanagement.repositories.StudentRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
-@RequestMapping("/students")
-@CrossOrigin(origins = "http://localhost:4200")
-@AllArgsConstructor
+@RequestMapping("/api/students")
 public class StudentController {
-IStudentService studentService;
 
-    @GetMapping("/getAllStudents")
-    public List<Student> getAllStudents() { return studentService.getAllStudents(); }
+    @Autowired
+    private StudentRepository studentRepository;
 
-    @GetMapping("/getStudent/{id}")
-    public Student getStudent(@PathVariable Long id) { return studentService.getStudentById(id); }
-
-    @PostMapping("/createStudent")
-    public Student createStudent(@RequestBody Student student) { return studentService.saveStudent(student); }
-
-    @PutMapping("/updateStudent")
-    public Student updateStudent(@RequestBody Student student) {
-        return studentService.saveStudent(student);
+    @GetMapping
+    public List<Student> getAllStudents() {
+        return studentRepository.findAll();
     }
 
-    @DeleteMapping("/deleteStudent/{id}")
-    public void deleteStudent(@PathVariable Long id) { studentService.deleteStudent(id); }
+    @GetMapping("/{id}")
+    public ResponseEntity<Student> getStudentById(@PathVariable Long id) {
+        Optional<Student> student = studentRepository.findById(id);
+        return student.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public Student createStudent(@RequestBody Student student) {
+        return studentRepository.save(student);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Student> updateStudent(@PathVariable Long id, @RequestBody Student studentDetails) {
+        Optional<Student> student = studentRepository.findById(id);
+        if (student.isPresent()) {
+            Student existingStudent = student.get();
+            existingStudent.setFirstName(studentDetails.getFirstName());
+            existingStudent.setLastName(studentDetails.getLastName());
+            existingStudent.setEmail(studentDetails.getEmail());
+            existingStudent.setAge(studentDetails.getAge());
+            return ResponseEntity.ok(studentRepository.save(existingStudent));
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteStudent(@PathVariable Long id) {
+        if (studentRepository.existsById(id)) {
+            studentRepository.deleteById(id);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
 }
